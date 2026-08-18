@@ -1,0 +1,31 @@
+# Python backend
+back-end/__pycache__/
+back-end/*.py[cod]
+back-end/.pytest_cache/
+back-end/.mypy_cache/
+back-end/.venv/
+back-end/env/
+back-end/.env
+back-end/.env.*
+
+# Virtual environment folders
+.venv/
+env/
+venv/
+
+# Frontend / React / Vite
+client/AJALI/node_modules/
+client/AJALI/dist/
+client/AJALI/build/
+client/AJALI/.vite/
+client/AJALI/.env
+client/AJALI/.env.*
+
+# Logs
+*.log
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
