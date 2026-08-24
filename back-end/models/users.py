@@ -9,7 +9,7 @@ class User(db.model):
     email=db.Column(db.String(100), unique=True, nullable=False)
     passsword=db.Column(db.String, nullable=False)
     role=db.Column(db.String, default="user", nullable=False)
-    created_at=db.Column(db.Datetime, default=datetime.utcnow)
+    created_at=db.Column(db.Datetime, default=datetime.utcnow, nullable=False)
 
 #To return an object into a string.
     def __repr__(self):
