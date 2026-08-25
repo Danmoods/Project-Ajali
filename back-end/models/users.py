@@ -1,27 +1,85 @@
 from extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timezone
 
-class User(db.model):
-    __tablename__="users"
+
+class User(db.Model):
+    __tablename__ = "users"
+
     id = db.Column(db.Integer, primary_key=True)
-    username=db.Column(db.String(100), unique=True, nullable=False)
-    email=db.Column(db.String(100), unique=True, nullable=False)
-    passsword=db.Column(db.String, nullable=False)
-    role=db.Column(db.String, default="user", nullable=False)
-    created_at=db.Column(db.Datetime, default=datetime.utcnow, nullable=False)
 
-#To return an object into a string.
-    def __repr__(self):
-        return f"<User{self.username}>"
+    username = db.Column(
+        db.String(100),
+        unique=True,
+        nullable=False
+    )
 
-# Method to set a users password
-    def set_password(self,password):
-        self.password = generate_password_hash(password)
+    email = db.Column(
+        db.String(120),
+        unique=True,
+        nullable=False
+    )
 
-# Method to check a users password
+    password_hash = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+    phone = db.Column(
+        db.String(20),
+        nullable=True
+    )
+
+    bio = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    profile_photo = db.Column(
+        db.String(255),
+        nullable=True
+    )
+
+    role = db.Column(
+        db.String(20),
+        default="user",
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+
+    # Relationships
+    incidents = db.relationship(
+        "Incident",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    posts = db.relationship(
+        "CommunityPost",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
     def check_password(self, password):
-        # check the raw password and compares it with the stored hash password.
-        return check_password_hash(self.password, password)
+        return check_password_hash(
+            self.password_hash,
+            password
+        )
 
-    
+    def __repr__(self):
+        return f"<User {self.username}>"
