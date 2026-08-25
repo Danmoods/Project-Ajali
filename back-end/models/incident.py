@@ -12,6 +12,7 @@ class Incident(db.Model):
     longitude=db.Column(db.Float, nullable=False)
     status=db.Column(db.Enum("under investigation","verified","resolved","rejected", name="incident_status"), default="under investigation", nullable=False)
     created_at=db.Column(db.DateTime,default=datetime.utcnow, nullable=False )
+<<<<<<< HEAD
     updated_at=db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     user=db.relationship("User", back_populates="incidents")
     media=db.relationship("Media", back_populates="incident", cascade="all, delete-orphan")
@@ -19,3 +20,6 @@ class Incident(db.Model):
 
     def __repr__(self):
         return f"<Incident {self.id} - {self.title}>"
+=======
+    updated_at=db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+>>>>>>> 7a4c969 (I have made the community_posts models and made changes on incident, media, users)
