@@ -1,7 +1,9 @@
 from flask import Flask
 from flask_cors import CORS
+from flask_restful import Api
 
 from config import Config
+from controller import register_resources
 from extensions import db, migrate, jwt, ma
 
 def create_app():
@@ -17,6 +19,9 @@ def create_app():
 
     CORS(app)
 
+    api = Api(app)
+    register_resources(api)
+
     @app.route("/")
     def home():
         return {
@@ -31,5 +36,4 @@ app = create_app()
 
 if __name__ == "__main__":
     app.run(debug=True)
-
 
