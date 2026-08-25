@@ -4,6 +4,11 @@ from flask_cors import CORS
 from config import Config
 from extensions import db, migrate, jwt, ma
 
+from models.users import Users
+from models.incident import Incident
+from models.media import Media
+from models.community_post import CommunityPost
+
 def create_app():
     app = Flask(__name__)
 
