@@ -1,13 +1,3 @@
-"""Authentication and profile resources for the Ajali API.
-
-Register these resources in ``main.py`` when the API is wired up:
-
-* ``RegisterController`` -> ``/auth/register``
-* ``LoginController`` -> ``/auth/login``
-* ``CurrentUserController`` -> ``/auth/me``
-* ``ChangePasswordController`` -> ``/auth/change-password``
-"""
-
 import re
 
 from flask import request

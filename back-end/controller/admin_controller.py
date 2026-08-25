@@ -1,12 +1,3 @@
-"""Admin resources for the Ajali incident-review workflow.
-
-Register these resources in ``main.py`` when the API is wired up:
-
-* ``AdminController`` -> ``/admin/dashboard``
-* ``AdminIncidentsController`` -> ``/admin/incidents``
-* ``AdminIncidentController`` -> ``/admin/incidents/<int:incident_id>``
-"""
-
 from datetime import datetime
 
 from flask import request
