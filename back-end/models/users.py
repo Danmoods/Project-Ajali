@@ -6,15 +6,10 @@ from datetime import datetime, timezone
 class User(db.Model):
     __tablename__ = "users"
 
-    id = db.Column(db.Integer, primary_key=True)
-<<<<<<< HEAD
-=======
-    username=db.Column(db.String(100), unique=True, nullable=False)
-    email=db.Column(db.String(100), unique=True, nullable=False)
-    passsword=db.Column(db.String, nullable=False)
-    role=db.Column(db.String, default="user", nullable=False)
-    created_at=db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
->>>>>>> 7a4c969 (I have made the community_posts models and made changes on incident, media, users)
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
 
     username = db.Column(
         db.String(100),
