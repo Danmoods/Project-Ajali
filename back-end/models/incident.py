@@ -11,5 +11,11 @@ class Incident(db.Model):
     latitude=db.Column(db.Float, nullable=False)
     longitude=db.Column(db.Float, nullable=False)
     status=db.Column(db.Enum("under investigation","verified","resolved","rejected", name="incident_status"), default="under investigation", nullable=False)
-    created_at=db.Column(db.Datetime,default=datetime.utcnow, nullable=False )
-    updated_at=db.Column(db.Datetime, default=datetime.utcnow, nullable=False)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow, nullable=False )
+    updated_at=db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    user=db.relationship("User", back_populates="incidents")
+    media=db.relationship("Media", back_populates="incident", cascade="all, delete-orphan")
+
+
+    def __repr__(self):
+        return f"<Incident {self.id} - {self.title}>"
