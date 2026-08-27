@@ -1,4 +1,3 @@
-APPLAYOUT.JSX
 
 import { useState } from 'react'
 import { NavLink, Outlet, Link } from 'react-router-dom'
