@@ -1,40 +1,12 @@
-from marshmallow import Schema, fields, validate
+from extensions import ma
+from models.users import User
 
 
-class UserSchema(Schema):
-    id = fields.Int(dump_only=True)
+class UserSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = User
+        load_instance = True
 
-    username = fields.Str(
-        required=True,
-        validate=validate.Length(min=3, max=100)
-    )
 
-    email = fields.Email(
-        required=True
-    )
-
-    phone = fields.Str(
-        allow_none=True,
-        validate=validate.Length(max=20)
-    )
-
-    bio = fields.Str(
-        allow_none=True
-    )
-
-    profile_photo = fields.Str(
-        allow_none=True,
-        validate=validate.Length(max=255)
-    )
-
-    role = fields.Str(
-        dump_only=True
-    )
-
-    created_at = fields.DateTime(
-        dump_only=True
-    )
-
-    updated_at = fields.DateTime(
-        dump_only=True
-    )
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
