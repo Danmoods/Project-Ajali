@@ -6,6 +6,8 @@ from config import Config
 from controller import register_resources
 from extensions import db, migrate, jwt, ma
 
+from models import User, Incident, CommunityPost, Media
+
 def create_app():
     app = Flask(__name__)
 
