@@ -11,6 +11,16 @@ from .auth_controller import (
     LoginController,
     RegisterController,
 )
+from .community_controller import (
+    CommunityPostController,
+    CommunityPostsController,
+)
+from .incident_controller import (
+    IncidentController,
+    IncidentMediaController,
+    IncidentMediaDetailController,
+    IncidentsController,
+)
 
 
 def register_resources(api):
@@ -27,4 +37,26 @@ def register_resources(api):
     api.add_resource(
         AdminIncidentController,
         "/admin/incidents/<int:incident_id>",
+    )
+
+    # Citizen incident reporting and evidence
+    api.add_resource(IncidentsController, "/incidents")
+    api.add_resource(
+        IncidentController,
+        "/incidents/<int:incident_id>",
+    )
+    api.add_resource(
+        IncidentMediaController,
+        "/incidents/<int:incident_id>/media",
+    )
+    api.add_resource(
+        IncidentMediaDetailController,
+        "/incidents/<int:incident_id>/media/<int:media_id>",
+    )
+
+    # Community wall
+    api.add_resource(CommunityPostsController, "/community/posts")
+    api.add_resource(
+        CommunityPostController,
+        "/community/posts/<int:post_id>",
     )
