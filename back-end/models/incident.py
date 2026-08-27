@@ -61,9 +61,10 @@ class Incident(db.Model):
     )
 
     updated_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow,
-        nullable=False
+    db.DateTime,
+    default=datetime.utcnow,
+    onupdate=datetime.utcnow,
+    nullable=False
     )
 
     user = db.relationship(
