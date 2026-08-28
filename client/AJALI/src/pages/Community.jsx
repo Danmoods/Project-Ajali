@@ -12,11 +12,21 @@ export default function Community() {
   const [draft, setDraft] = useState('')
   const navigate = useNavigate()
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault()
+
     if (!draft.trim()) return
-    addPost({ author: user?.username || 'You', body: draft.trim() })
-    setDraft('')
+
+    try {
+      await addPost({
+        content: draft.trim(),
+      })
+
+      setDraft('')
+    } catch (error) {
+      console.error('Error creating community post:', error)
+      alert(error.message || 'Failed to submit post')
+    }
   }
 
   return (

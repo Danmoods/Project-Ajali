@@ -7,13 +7,13 @@ import { useAuth } from '../context/AuthContext.jsx'
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ username: '', email: '', password: '', confirm: '' })
+  const [form, setForm] = useState({username: '', password: '', confirm_password: '',})
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault()
     setError('')
 
@@ -21,18 +21,18 @@ export default function Register() {
       setError('Please fill in every field.')
       return
     }
-    if (form.password.length < 6) {
+    if (form.password.length < 8) {
       setError('Password must be at least 6 characters.')
       return
     }
-    if (form.password !== form.confirm) {
+    if (form.password !== form.confirm_password) {
       setError('Passwords do not match.')
       return
     }
 
     setLoading(true)
     try {
-      register(form)
+      await register(form)
       navigate('/app')
     } catch (err) {
       setError(err.message)
@@ -53,7 +53,7 @@ export default function Register() {
         <Field label="Username" icon={User} name="username" value={form.username} onChange={onChange} placeholder="Enter your username" />
         <Field label="Email" icon={Mail} name="email" type="email" value={form.email} onChange={onChange} placeholder="Enter your email" />
         <Field label="Password" icon={Lock} name="password" type="password" value={form.password} onChange={onChange} placeholder="Create a password" />
-        <Field label="Confirm Password" icon={Lock} name="confirm" type="password" value={form.confirm} onChange={onChange} placeholder="Confirm your password" />
+        <Field label="Confirm Password" icon={Lock} name="confirm_password" type="password" value={form.confirm_password} onChange={onChange} placeholder="Confirm your password" />
 
         <button type="submit" disabled={loading} className="btn-primary mt-2 w-full">
           <UserPlus size={17} /> {loading ? 'Creating account…' : 'Create Account'}

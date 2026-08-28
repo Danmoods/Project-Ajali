@@ -54,27 +54,31 @@ export default function ReportForm() {
     if (file) setVideoName(file.name)
   }
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault()
+
     if (!form.title || !form.description || !form.address) return
+
     setSubmitting(true)
-    setTimeout(() => {
-      const record = addIncident({
+
+    try {
+      const record = await addIncident({
         title: form.title,
         description: form.description,
         location: form.address,
         lat: form.lat,
         lng: form.lng,
         category: category.category || category.label,
-        severity: 'Warning',
-        reporter: 'You',
-        reporterType: 'Citizen',
-        evidence: photos,
-        hasVideo: Boolean(videoName),
+        incident_type: 'intervention',
       })
-      setSubmitting(false)
+
       setSubmitted(record.id)
-    }, 700)
+    } catch (error) {
+      console.error('Error submitting incident:', error)
+      alert(error.message || 'Failed to submit report')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (submitted) {

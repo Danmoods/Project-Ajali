@@ -15,12 +15,12 @@ export default function Login() {
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      const session = login(form)
+      const session = await login(form)
       const dest = session.role === 'admin' ? '/admin' : location.state?.from?.pathname || '/app'
       navigate(dest, { replace: true })
     } catch (err) {
