@@ -12,7 +12,10 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "20a35e57e8de"
-down_revision = "29b0840b8649"
+# This migration modifies the `incidents` table which is created in
+# revision 33ef8be2c5ea, so make that the down revision to ensure correct
+# ordering: baseline -> 33ef8be2c5ea -> 20a35e57e8de
+down_revision = "33ef8be2c5ea"
 branch_labels = None
 depends_on = None
 
@@ -39,22 +42,31 @@ def upgrade():
     incident_type_enum.create(bind, checkfirst=True)
     incident_status_enum.create(bind, checkfirst=True)
 
-    # Add incident_type temporarily as nullable
-    op.add_column(
-        "incidents",
-        sa.Column(
-            "incident_type",
-            incident_type_enum,
-            nullable=True
+    # Add incident_type temporarily as nullable if it does not already exist
+    cols = bind.exec_driver_sql(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name='incidents' AND column_name='incident_type'"
+    ).fetchone()
+    if not cols:
+        op.add_column(
+            "incidents",
+            sa.Column(
+                "incident_type",
+                incident_type_enum,
+                nullable=True
+            )
         )
-    )
 
-    # Convert existing VARCHAR status to PostgreSQL enum
+    # Convert existing VARCHAR status to PostgreSQL enum.
+    # Drop any text default first so the type conversion can proceed,
+    # then restore an appropriate enum default.
+    op.execute("ALTER TABLE incidents ALTER COLUMN status DROP DEFAULT")
     op.execute("""
         ALTER TABLE incidents
         ALTER COLUMN status TYPE incident_status
         USING status::incident_status
     """)
+    op.execute("ALTER TABLE incidents ALTER COLUMN status SET DEFAULT 'under investigation'::incident_status")
 
     # Change title from VARCHAR(150) to VARCHAR(100)
     op.alter_column(
@@ -74,11 +86,16 @@ def upgrade():
         existing_nullable=False
     )
 
-    # Remove old category column
-    op.drop_column(
-        "incidents",
-        "category"
-    )
+    # Remove old category column if it exists
+    cat_col = bind.exec_driver_sql(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name='incidents' AND column_name='category'"
+    ).fetchone()
+    if cat_col:
+        op.drop_column(
+            "incidents",
+            "category"
+        )
 
     # Make incident_type required
     op.alter_column(

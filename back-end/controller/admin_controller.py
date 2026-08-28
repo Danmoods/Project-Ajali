@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -277,7 +277,7 @@ class AdminIncidentController(AdminResource):
 
         incident.status = status
         # ``Incident.updated_at`` has no model-level ``onupdate`` yet.
-        incident.updated_at = datetime.utcnow()
+        incident.updated_at = datetime.now(timezone.utc)
 
         try:
             db.session.commit()

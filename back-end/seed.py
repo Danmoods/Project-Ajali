@@ -19,7 +19,7 @@ Tables must exist first (Alembic migrations in production, or
     cd back-end && python seed.py
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from main import create_app, db
 from models import *
@@ -121,7 +121,7 @@ class Seed:
         if not (wanjiku and otieno and akinyi):
             return
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         incident_list = [
             {
@@ -254,7 +254,7 @@ class Seed:
         if not (wanjiku and otieno and akinyi):
             return
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         post_list = [
             {
