@@ -1,133 +1,122 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
+import { apiFetch } from '../lib/api.js'
 
 const AuthContext = createContext(null)
 
-const USERS_KEY = 'ajali_users'
-const SESSION_KEY = 'ajali_session'
-
-function readUsers() {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY)) || []
-  } catch {
-    return []
-  }
-}
-
-function writeUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [token, setToken] = useState(() =>
+    localStorage.getItem('ajali_token')
+  )
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    try {
-      const session = JSON.parse(localStorage.getItem(SESSION_KEY))
-      if (session) setUser(session)
-    } catch {
-      /* noop */
-    }
+    const restoreSession = async () => {
+      const savedToken = localStorage.getItem('ajali_token')
 
-    setReady(true)
-  }, [])
-
-  const register = ({ username, email, password }) => {
-    const users = readUsers()
-
-    if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-      throw new Error('An account with that email already exists.')
-    }
-
-    const newUser = {
-      id: crypto.randomUUID(),
-      username,
-      email,
-      password,
-      role: 'citizen',
-      responderId: `#${Math.floor(10000 + Math.random() * 89999)}-AJ`,
-      joined: new Date().getFullYear(),
-      phone: '',
-      bio: 'Committed to community safety and rapid response tracking.',
-      avatar: null,
-    }
-
-    writeUsers([...users, newUser])
-
-    const session = { ...newUser }
-    delete session.password
-
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    setUser(session)
-
-    return session
-  }
-
-  const login = ({ email, password }) => {
-    const users = readUsers()
-
-    // Demo/admin shortcut so reviewers can access the admin dashboard.
-    if (email.toLowerCase() === 'admin@ajali.app' && password === 'admin123') {
-      const adminSession = {
-        id: 'admin',
-        username: 'Control Room Admin',
-        email,
-        role: 'admin',
-        responderId: '#00001-AJ',
-        joined: 2022,
+      if (!savedToken) {
+        setReady(true)
+        return
       }
 
-      localStorage.setItem(SESSION_KEY, JSON.stringify(adminSession))
-      setUser(adminSession)
+      try {
+        const data = await apiFetch('/auth/me')
 
-      return adminSession
+        setUser(data.user)
+        setToken(savedToken)
+      } catch (error) {
+        console.error('Session restore failed:', error)
+
+        localStorage.removeItem('ajali_token')
+        localStorage.removeItem('ajali_user')
+
+        setToken(null)
+        setUser(null)
+      } finally {
+        setReady(true)
+      }
     }
 
-    const found = users.find(
-      (u) =>
-        u.email.toLowerCase() === email.toLowerCase() &&
-        u.password === password
-    )
+    restoreSession()
+  }, [])
 
-    if (!found) {
-      throw new Error('Incorrect email or password.')
-    }
+  const register = async (form) => {
+    const data = await apiFetch('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: form.username,
+        email: form.email,
+        password: form.password,
+        confirm_password:
+          form.confirm_password || form.confirm,
+        ...(form.phone ? { phone: form.phone } : {}),
+      }),
+    })
 
-    const session = { ...found }
-    delete session.password
+    localStorage.setItem('ajali_token', data.access_token)
+    localStorage.setItem('ajali_user', JSON.stringify(data.user))
 
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    setUser(session)
+    setToken(data.access_token)
+    setUser(data.user)
 
-    return session
+    return data.user
+  }
+
+  const login = async (form) => {
+    const data = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: form.email,
+        password: form.password,
+      }),
+    })
+
+    localStorage.setItem('ajali_token', data.access_token)
+    localStorage.setItem('ajali_user', JSON.stringify(data.user))
+
+    setToken(data.access_token)
+    setUser(data.user)
+
+    return data.user
   }
 
   const logout = () => {
-    localStorage.removeItem(SESSION_KEY)
+    localStorage.removeItem('ajali_token')
+    localStorage.removeItem('ajali_user')
+
+    setToken(null)
     setUser(null)
   }
 
-  const updateProfile = (patch) => {
-    setUser((prev) => {
-      const next = { ...prev, ...patch }
+  const updateProfile = async (form) => {
+    if (!token) {
+      throw new Error('You must be logged in')
+    }
 
-      localStorage.setItem(SESSION_KEY, JSON.stringify(next))
-
-      const users = readUsers().map((u) =>
-        u.id === next.id ? { ...u, ...patch } : u
-      )
-
-      writeUsers(users)
-
-      return next
+    const data = await apiFetch('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        username: form.username,
+        email: form.email,
+        phone: form.phone,
+        bio: form.bio,
+        profile_photo: form.profile_photo,
+      }),
     })
+
+    setUser(data.user)
+    localStorage.setItem('ajali_user', JSON.stringify(data.user))
+
+    return data.user
   }
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        token,
         ready,
+        loading: !ready,
         register,
         login,
         logout,
@@ -139,4 +128,12 @@ export function AuthProvider({ children }) {
   )
 }
 
-export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+
+  if (!context) {
+    throw new Error('useAuth must be used inside an AuthProvider')
+  }
+
+  return context
+}
