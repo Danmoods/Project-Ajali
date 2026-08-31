@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({username: '', password: '', confirm_password: '',})
+  const [form, setForm] = useState({username: '', email: '', password: '', confirm_password: '',})
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -17,20 +17,35 @@ export default function Register() {
     e.preventDefault()
     setError('')
 
-    if (!form.username || !form.email || !form.password) {
+    if (
+      !form.username ||
+      !form.email ||
+      !form.password ||
+      !form.confirm_password
+    ) {
       setError('Please fill in every field.')
       return
     }
-    if (form.password.length < 8) {
-      setError('Password must be at least 6 characters.')
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (!emailRegex.test(form.email)) {
+      setError('Please enter a valid email address.')
       return
     }
+
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      return
+    }
+
     if (form.password !== form.confirm_password) {
       setError('Passwords do not match.')
       return
     }
 
     setLoading(true)
+
     try {
       await register(form)
       navigate('/app')
