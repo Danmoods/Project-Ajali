@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Home, TriangleAlert, Clock, MessagesSquare, Compass, User, LogOut,
@@ -16,16 +16,76 @@ const LINKS = [
   { to: '/app/profile', label: 'Profile', icon: User },
 ]
 
+
+
 export default function Profile() {
   const { user, updateProfile, logout } = useAuth()
   const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
+  const fileInputRef = useRef(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [form, setForm] = useState({
     username: user?.username || '',
     email: user?.email || '',
     phone: user?.phone || '',
     bio: user?.bio || 'Committed to community safety and rapid response tracking.',
   })
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0]
+
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file.')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Profile picture must be smaller than 5MB.')
+      return
+    }
+
+    try {
+      setUploadingPhoto(true)
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('upload_preset', 'ajali_profile_upload')
+
+      const uploadResponse = await fetch(
+        'https://api.cloudinary.com/v1_1/askth98l/image/upload',
+        {
+          method: 'POST',
+          body: formData,
+        }
+      )
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload profile picture.')
+      }
+
+      const cloudinaryData = await uploadResponse.json()
+
+      const updatedUser = await updateProfile({
+        ...form,
+        profile_photo: cloudinaryData.secure_url,
+      })
+
+      setForm((prev) => ({
+        ...prev,
+        username: updatedUser.username || prev.username,
+        email: updatedUser.email || prev.email,
+        phone: updatedUser.phone || prev.phone,
+        bio: updatedUser.bio || prev.bio,
+      }))
+    } catch (err) {
+      alert(err.message || 'Failed to update profile picture.')
+    } finally {
+      setUploadingPhoto(false)
+      e.target.value = ''
+    }
+  }
 
   const onSave = () => {
     updateProfile(form)
@@ -79,10 +139,29 @@ export default function Profile() {
         <section className="card p-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="relative w-fit">
-              <Avatar name={user?.username || 'Alex Mercer'} size={90} />
-              <button className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-crimson-500 text-white shadow-glow">
+              <Avatar
+                name={user?.username || 'Alex Mercer'}
+                size={90}
+                src={user?.profile_photo}
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-crimson-500 text-white shadow-glow transition hover:bg-crimson-400 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Change profile picture"
+              >
                 <Pencil size={13} />
               </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoChange}
+              />
             </div>
             <div className="flex-1">
               {editing ? (

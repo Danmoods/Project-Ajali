@@ -1,42 +1,104 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, Navigation, ImagePlus, Printer, ShieldAlert, Film } from 'lucide-react'
-import { useData } from '../context/DataContext.jsx'
+import { apiFetch } from '../lib/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import Badge from '../components/ui/Badge.jsx'
 
-const STATUS_OPTIONS = ['Pending Review', 'Under Review', 'Investigating', 'Resolved', 'Rejected']
+const STATUS_OPTIONS = [
+  { value: 'under investigation', label: 'Under Investigation' },
+  { value: 'verified', label: 'Verified' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'rejected', label: 'Rejected' },
+]
 
 export default function IncidentDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { incidents, updateIncident } = useData()
+
+  const backTo = '/app/reports'
+
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
+  
 
-  const incident = incidents.find((i) => i.id === id)
-  const [status, setStatus] = useState(incident?.status || 'Pending Review')
+  const [incident, setIncident] = useState(null)
+  const [status, setStatus] = useState('')
   const [notes, setNotes] = useState('')
   const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  if (!incident) {
+  useEffect(() => {
+    let mounted = true
+
+    async function loadIncident() {
+      try {
+        setLoading(true)
+        setError('')
+
+        const data = await apiFetch(`/incidents/${id}`)
+
+        if (mounted) {
+          const loadedIncident = data.incident || data
+          setIncident(loadedIncident)
+          setStatus(loadedIncident.status || '')
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err.message || 'Failed to load incident')
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadIncident()
+
+    return () => {
+      mounted = false
+    }
+  }, [id])
+
+  if (loading) {
     return (
-      <div className="flex flex-col items-center gap-4 py-24 text-center">
-        <ShieldAlert size={32} className="text-slate-600" />
-        <p className="font-semibold text-slate-200">Incident not found</p>
-        <button onClick={() => navigate(-1)} className="btn-secondary">
-          Go back
-        </button>
+      <div className="animate-fadeUp">
+        <p className="text-sm text-slate-400">
+          Loading incident...
+        </p>
       </div>
     )
   }
 
-  const backTo = isAdmin ? '/admin/incidents' : '/app/reports'
+  if (error) {
+    return (
+      <div className="animate-fadeUp">
+        <div className="card p-6">
+          <p className="text-sm text-crimson-400">
+            {error}
+          </p>
 
-  const handleUpdateStatus = () => {
-    updateIncident(incident.id, { status })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+          <button
+            onClick={() => navigate('/app/reports')}
+            className="btn-secondary mt-4"
+          >
+            Back to My Reports
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!incident) {
+    return (
+      <div className="animate-fadeUp">
+        <p className="text-sm text-slate-400">
+          Incident not found.
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -76,12 +138,32 @@ export default function IncidentDetail() {
             <p className="text-sm leading-relaxed text-slate-400">{incident.description}</p>
 
             <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Meta label="Category" value={incident.category} />
-              <Meta label="Reporter" value={`${incident.reporter} (${incident.reporterType || 'Citizen'})`} />
-              <Meta label="Date / Time" value={`${incident.date} · ${incident.time}`} />
+              <Meta
+                label="Category"
+                value={incident.incident_type || 'Not provided'}
+              />
+
+              <Meta
+                label="Reporter"
+                value={`${incident.reporter?.username || 'Unknown'} (${incident.reporter?.role || 'Citizen'})`}
+              />
+
+              <Meta
+                label="Date / Time"
+                value={
+                  incident.created_at
+                    ? new Date(incident.created_at).toLocaleString()
+                    : 'Not provided'
+                }
+              />
+
               <Meta
                 label="Severity"
-                value={<span className={incident.severity === 'Critical' ? 'text-crimson-400' : 'text-amber-400'}>{incident.severity}</span>}
+                value={
+                  <span className="text-amber-400">
+                    Not provided
+                  </span>
+                }
               />
             </div>
           </section>
@@ -90,26 +172,30 @@ export default function IncidentDetail() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display font-semibold text-white">Evidence Gallery</h2>
               <span className="text-xs text-slate-500">
-                {(incident.evidence?.length || 0) + (incident.hasVideo ? 1 : 0)} file(s) attached
+                {incident.media?.length || 0} file(s) attached
               </span>
             </div>
             <div className="flex flex-wrap gap-4">
-              {(incident.evidence || []).map((src, idx) => (
-                <div key={idx} className="h-28 w-28 overflow-hidden rounded-xl border border-white/10 sm:h-32 sm:w-32">
-                  <img src={src} alt="Evidence" className="h-full w-full object-cover" />
+              {(incident.media || []).map((media) => (
+                <div
+                  key={media.id}
+                  className="overflow-hidden rounded-xl border border-white/10"
+                >
+                  {media.media_type === 'video' ? (
+                    <video
+                      src={media.file_url}
+                      controls
+                      className="h-32 w-32 object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={media.file_url}
+                      alt="Incident evidence"
+                      className="h-32 w-32 object-cover"
+                    />
+                  )}
                 </div>
               ))}
-              {incident.hasVideo && (
-                <div className="flex h-28 w-28 flex-col items-center justify-center gap-2 rounded-xl border border-white/10 bg-ink-900 text-slate-400 sm:h-32 sm:w-32">
-                  <Film size={22} />
-                  <span className="text-[11px]">Dashcam.mp4</span>
-                </div>
-              )}
-              <label className="flex h-28 w-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-slate-500 transition hover:border-amber-400/50 hover:text-amber-400 sm:h-32 sm:w-32">
-                <ImagePlus size={20} />
-                <span className="text-xs">Add Photo</span>
-                <input type="file" accept="image/*" className="hidden" />
-              </label>
             </div>
           </section>
         </div>
