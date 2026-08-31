@@ -213,12 +213,12 @@ class Seed:
         media = [
             Media(
                 incident_id=incident.id,
-                file_url="https://images.ajali.dev/evidence/scene.jpg",
+                file_url="https://res.cloudinary.com/askth98l/image/upload/f_auto,q_auto/image-auto-accident-involving-two-cars_613910-7924",
                 media_type="image",
             ),
             Media(
                 incident_id=incident.id,
-                file_url="https://images.ajali.dev/evidence/clip.mp4",
+                file_url="https://res-console.cloudinary.com/askth98l/thumbnails/transform/v1/video/upload/Zl9hdXRvLHFfYXV0bw==/v1/dmlkZW8=/template",
                 media_type="video",
             ),
         ]

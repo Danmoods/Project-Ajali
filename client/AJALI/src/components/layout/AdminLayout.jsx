@@ -56,7 +56,9 @@ export default function AdminLayout() {
         </button>
       </nav>
 
-      <Avatar name={user?.username || 'Admin'} size={38} />
+      <Link to="/app/profile" aria-label="Profile">
+        <Avatar name={user?.username || 'Ajali User'} size={38} />
+      </Link>
     </div>
 
     {open && (
