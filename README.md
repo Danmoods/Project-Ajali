@@ -178,7 +178,13 @@ The project consists of a React frontend and a Flask REST API backend backed by 
 
 ---
 
-## Project Structure
+## Demo Links ##
+
+Vercel.com(Request, not granted yet):  [https://project-ajali-q1j3pl5nw-saitamang1234-7085s-projects.vercel.app/register]
+
+Render.com : [https://project-ajali.onrender.com/]
+
+## Project Structure 
 
 ```text
 Project-Ajali/
