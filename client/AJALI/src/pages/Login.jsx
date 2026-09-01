@@ -95,7 +95,7 @@ export default function Login() {
           </Link>
         </p>
         <p className="text-center text-xs text-slate-600">
-          Demo admin access: admin@ajali.app / admin123
+          Demo admin access: admin@ajali.com / admin123
         </p>
       </form>
     </AuthLayout>
