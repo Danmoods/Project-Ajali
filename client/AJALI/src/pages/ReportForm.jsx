@@ -1,11 +1,54 @@
-import { useState } from 'react'
-import { useLocation, useNavigate, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, Link } from 'react-router-dom'
 import { ArrowLeft, MapPin, Crosshair, Map, Camera, Video, Send, X } from 'lucide-react'
+import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leaflet'
 import { useData } from '../context/DataContext.jsx'
+
+const NAIROBI = [-1.286389, 36.817223]
+
+function MapPicker({ selectedLocation, onSelect }) {
+  function MapClickHandler() {
+    useMapEvents({
+      click(event) {
+        onSelect([event.latlng.lat, event.latlng.lng])
+      },
+    })
+
+    return null
+  }
+
+  return (
+    <MapContainer
+      center={selectedLocation || NAIROBI}
+      zoom={12}
+      scrollWheelZoom
+      dragging
+      className="h-full w-full"
+      style={{ height: '100%', width: '100%' }}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <MapClickHandler />
+      {selectedLocation && (
+        <CircleMarker
+          center={selectedLocation}
+          radius={10}
+          pathOptions={{
+            color: '#ef4444',
+            fillColor: '#ef4444',
+            fillOpacity: 0.9,
+            weight: 2,
+          }}
+        />
+      )}
+    </MapContainer>
+  )
+}
 
 export default function ReportForm() {
   const { state } = useLocation()
-  const navigate = useNavigate()
   const { addIncident } = useData()
 
   const category = state?.category || { label: 'Vehicle Accident', category: 'Vehicle Accident' }
@@ -17,27 +60,59 @@ export default function ReportForm() {
     lat: '',
     lng: '',
   })
+  const [selectedLocation, setSelectedLocation] = useState(null)
+  const [showMapPicker, setShowMapPicker] = useState(false)
   const [photos, setPhotos] = useState([])
   const [videoName, setVideoName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
+  useEffect(() => {
+    if (form.lat && form.lng) {
+      const latitude = Number(form.lat)
+      const longitude = Number(form.lng)
+
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        setSelectedLocation([latitude, longitude])
+      }
+    }
+  }, [form.lat, form.lng])
+
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
   const useCurrentLocation = () => {
     if (!navigator.geolocation) return
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        const latitude = pos.coords.latitude.toFixed(4)
+        const longitude = pos.coords.longitude.toFixed(4)
+
         setForm((f) => ({
           ...f,
-          lat: pos.coords.latitude.toFixed(4),
-          lng: pos.coords.longitude.toFixed(4),
+          lat: latitude,
+          lng: longitude,
         }))
+        setSelectedLocation([Number(latitude), Number(longitude)])
+        setShowMapPicker(true)
       },
       () => {
-        setForm((f) => ({ ...f, lat: '34.0522', lng: '-118.2437' }))
+        setForm((f) => ({ ...f, lat: '-1.2864', lng: '36.8172' }))
+        setSelectedLocation([-1.2864, 36.8172])
+        setShowMapPicker(true)
       }
     )
+  }
+
+  const handleMapSelection = (coords) => {
+    const [latitude, longitude] = coords
+
+    setSelectedLocation(coords)
+    setForm((f) => ({
+      ...f,
+      lat: Number(latitude).toFixed(4),
+      lng: Number(longitude).toFixed(4),
+    }))
   }
 
   const onPhotoUpload = (e) => {
@@ -57,7 +132,10 @@ export default function ReportForm() {
   const onSubmit = async (e) => {
     e.preventDefault()
 
-    if (!form.title || !form.description || !form.address) return
+    const hasCoordinates = form.lat && form.lng
+    const hasAddress = Boolean(form.address && form.address.trim())
+
+    if (!form.title || !form.description || (!hasAddress && !hasCoordinates)) return
 
     setSubmitting(true)
 
@@ -65,7 +143,7 @@ export default function ReportForm() {
       const record = await addIncident({
         title: form.title,
         description: form.description,
-        location: form.address,
+        location: form.address || `${form.lat}, ${form.lng}`,
         lat: form.lat,
         lng: form.lng,
         category: category.category || category.label,
@@ -191,18 +269,24 @@ export default function ReportForm() {
               <button type="button" onClick={useCurrentLocation} className="btn-secondary">
                 <Crosshair size={16} /> Use My Current Location
               </button>
-              <button type="button" className="btn-secondary">
-                <Map size={16} /> Select Location on Map
+              <button
+                type="button"
+                onClick={() => setShowMapPicker((current) => !current)}
+                className="btn-secondary"
+              >
+                <Map size={16} /> {showMapPicker ? 'Hide Map Picker' : 'Select Location on Map'}
               </button>
             </div>
 
-            {(form.lat || form.address) && (
-              <div className="relative h-40 overflow-hidden rounded-xl border border-white/[0.06] bg-ink-900">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(240,38,79,0.25),transparent_60%)]" />
-                <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
-                  <MapPin className="text-crimson-500 drop-shadow-glow" size={30} />
-                  <span className="mt-1 text-xs text-slate-400">{form.address || 'Pinned location'}</span>
-                </div>
+            {(showMapPicker || form.lat || form.lng || form.address) && (
+              <div className="h-60 overflow-hidden rounded-xl border border-white/[0.06] bg-ink-900">
+                <MapPicker selectedLocation={selectedLocation || NAIROBI} onSelect={handleMapSelection} />
+              </div>
+            )}
+
+            {selectedLocation && (
+              <div className="rounded-xl border border-crimson-500/20 bg-crimson-500/5 px-3 py-2 text-xs text-slate-300">
+                Selected location: {selectedLocation[0].toFixed(4)}, {selectedLocation[1].toFixed(4)}
               </div>
             )}
           </div>
