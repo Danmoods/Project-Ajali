@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, Navigation, ImagePlus, Printer, ShieldAlert, Film } from 'lucide-react'
+import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet'
 import { apiFetch } from '../lib/api.js'
+import { getAdminIncident, updateAdminIncidentStatus } from '../api/adminApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import Badge from '../components/ui/Badge.jsx'
 
@@ -16,11 +18,9 @@ export default function IncidentDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  const backTo = '/app/reports'
-
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
-  
+  const backTo = isAdmin ? '/admin/incidents' : '/app/reports'
 
   const [incident, setIncident] = useState(null)
   const [status, setStatus] = useState('')
@@ -28,6 +28,23 @@ export default function IncidentDetail() {
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const incidentCoordinates =
+    incident &&
+    Number.isFinite(Number(incident.latitude)) &&
+    Number.isFinite(Number(incident.longitude))
+      ? [Number(incident.latitude), Number(incident.longitude)]
+      : null
+
+  const directionsUrl =
+    incidentCoordinates
+      ? `https://www.google.com/maps/dir/?api=1&destination=${incidentCoordinates[0]},${incidentCoordinates[1]}`
+      : null
+
+  const handleGetDirections = () => {
+    if (!directionsUrl) return
+    window.open(directionsUrl, '_blank', 'noopener,noreferrer')
+  }
 
   useEffect(() => {
     let mounted = true
@@ -37,12 +54,15 @@ export default function IncidentDetail() {
         setLoading(true)
         setError('')
 
-        const data = await apiFetch(`/incidents/${id}`)
+        const data = isAdmin
+          ? await getAdminIncident(id)
+          : await apiFetch(`/incidents/${id}`)
 
         if (mounted) {
           const loadedIncident = data.incident || data
           setIncident(loadedIncident)
           setStatus(loadedIncident.status || '')
+          setSaved(false)
         }
       } catch (err) {
         if (mounted) {
@@ -60,7 +80,29 @@ export default function IncidentDetail() {
     return () => {
       mounted = false
     }
-  }, [id])
+  }, [id, isAdmin])
+
+  const handleUpdateStatus = async () => {
+    if (!isAdmin) return
+
+    try {
+      setError('')
+      setSaved(false)
+
+      const data = await updateAdminIncidentStatus(id, status)
+      const updatedIncident = data.incident || data
+
+      setIncident((currentIncident) =>
+        currentIncident
+          ? { ...currentIncident, ...updatedIncident }
+          : updatedIncident
+      )
+      setStatus(updatedIncident.status || status)
+      setSaved(true)
+    } catch (err) {
+      setError(err.message || 'Failed to update incident status')
+    }
+  }
 
   if (loading) {
     return (
@@ -211,10 +253,17 @@ export default function IncidentDetail() {
 
               <label className="mt-4 block">
                 <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Change Status</span>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-field">
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
+                <select
+                  value={status}
+                  onChange={(e) => {
+                    setStatus(e.target.value)
+                    setSaved(false)
+                  }}
+                  className="input-field"
+                >
+                  {STATUS_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
@@ -241,25 +290,67 @@ export default function IncidentDetail() {
             <h2 className="mb-3 flex items-center gap-2 font-display font-semibold text-white">
               <MapPin size={16} className="text-crimson-400" /> Location
             </h2>
-            <div className="relative h-40 overflow-hidden rounded-xl border border-white/[0.06] bg-ink-900">
-              <div
-                className={`absolute inset-0 ${
-                  isAdmin
-                    ? 'bg-[linear-gradient(135deg,rgba(240,38,79,0.25),rgba(34,181,115,0.2))]'
-                    : 'bg-[radial-gradient(circle_at_50%_50%,rgba(240,38,79,0.25),transparent_60%)]'
-                }`}
-              />
-              <MapPin className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-crimson-400" size={28} />
-            </div>
-            <p className="mt-3 text-sm text-slate-400">{incident.location}</p>
-            {incident.lat && (
+
+            {incidentCoordinates ? (
+              <div className="h-40 overflow-hidden rounded-xl border border-white/[0.06] bg-ink-900">
+                <MapContainer
+                  center={incidentCoordinates}
+                  zoom={14}
+                  scrollWheelZoom={false}
+                  dragging={false}
+                  className="h-full w-full"
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <CircleMarker
+                    center={incidentCoordinates}
+                    radius={10}
+                    pathOptions={{
+                      color: '#ef4444',
+                      fillColor: '#ef4444',
+                      fillOpacity: 0.9,
+                      weight: 2,
+                    }}
+                  />
+                </MapContainer>
+              </div>
+            ) : (
+              <div className="relative h-40 overflow-hidden rounded-xl border border-white/[0.06] bg-ink-900">
+                <div
+                  className={`absolute inset-0 ${
+                    isAdmin
+                      ? 'bg-[linear-gradient(135deg,rgba(240,38,79,0.25),rgba(34,181,115,0.2))]'
+                      : 'bg-[radial-gradient(circle_at_50%_50%,rgba(240,38,79,0.25),transparent_60%)]'
+                  }`}
+                />
+                <MapPin className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-crimson-400" size={28} />
+              </div>
+            )}
+
+            <p className="mt-3 text-sm text-slate-400">
+              {incident.location ||
+                (incidentCoordinates
+                  ? `${incidentCoordinates[0]}, ${incidentCoordinates[1]}`
+                  : 'Location unavailable')}
+            </p>
+
+            {incidentCoordinates && (
               <p className="mt-1 text-xs text-slate-600">
-                Lat: {incident.lat}, Lng: {incident.lng}
+                Lat: {incidentCoordinates[0]}, Lng: {incidentCoordinates[1]}
               </p>
             )}
+
             {!isAdmin && (
-              <button className="btn-secondary mt-4 w-full">
-                <Navigation size={15} /> Get Directions
+              <button
+                type="button"
+                onClick={handleGetDirections}
+                disabled={!directionsUrl}
+                className="btn-secondary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Navigation size={15} /> {directionsUrl ? 'Get Directions' : 'Directions unavailable'}
               </button>
             )}
           </section>
