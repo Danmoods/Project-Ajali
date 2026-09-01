@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, Navigation, ImagePlus, Printer, ShieldAlert, Film } from 'lucide-react'
 import { apiFetch } from '../lib/api.js'
+import { getAdminIncident, updateAdminIncidentStatus } from '../api/adminApi.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import Badge from '../components/ui/Badge.jsx'
 
@@ -16,11 +17,9 @@ export default function IncidentDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  const backTo = '/app/reports'
-
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
-  
+  const backTo = isAdmin ? '/admin/incidents' : '/app/reports'
 
   const [incident, setIncident] = useState(null)
   const [status, setStatus] = useState('')
@@ -37,12 +36,15 @@ export default function IncidentDetail() {
         setLoading(true)
         setError('')
 
-        const data = await apiFetch(`/incidents/${id}`)
+        const data = isAdmin
+          ? await getAdminIncident(id)
+          : await apiFetch(`/incidents/${id}`)
 
         if (mounted) {
           const loadedIncident = data.incident || data
           setIncident(loadedIncident)
           setStatus(loadedIncident.status || '')
+          setSaved(false)
         }
       } catch (err) {
         if (mounted) {
@@ -60,7 +62,29 @@ export default function IncidentDetail() {
     return () => {
       mounted = false
     }
-  }, [id])
+  }, [id, isAdmin])
+
+  const handleUpdateStatus = async () => {
+    if (!isAdmin) return
+
+    try {
+      setError('')
+      setSaved(false)
+
+      const data = await updateAdminIncidentStatus(id, status)
+      const updatedIncident = data.incident || data
+
+      setIncident((currentIncident) =>
+        currentIncident
+          ? { ...currentIncident, ...updatedIncident }
+          : updatedIncident
+      )
+      setStatus(updatedIncident.status || status)
+      setSaved(true)
+    } catch (err) {
+      setError(err.message || 'Failed to update incident status')
+    }
+  }
 
   if (loading) {
     return (
@@ -211,10 +235,17 @@ export default function IncidentDetail() {
 
               <label className="mt-4 block">
                 <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Change Status</span>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-field">
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
+                <select
+                  value={status}
+                  onChange={(e) => {
+                    setStatus(e.target.value)
+                    setSaved(false)
+                  }}
+                  className="input-field"
+                >
+                  {STATUS_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
