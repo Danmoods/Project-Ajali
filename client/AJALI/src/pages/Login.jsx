@@ -95,7 +95,7 @@ export default function Login() {
           </Link>
         </p>
         <p className="text-center text-xs text-slate-600">
-          Demo admin access: AURELIA IS THE ADMIN, Email:
+          Demo admin access: admin@gmail.com, Password: admin123
         </p>
       </form>
     </AuthLayout>
